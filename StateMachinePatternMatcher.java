@@ -1,80 +1,90 @@
 import java.util.*;
 
 class StateMachinePatternMatcher {
-	State start = new State(null, "");
-	static class State {
-		Map<Character, State> nextStateMap;
-		String prefix;
-		boolean isFinal;
+    State start = new State(null, "");
+    static class State {
+        Map<Character, State> nextStateMap;
+        String prefix;
+        boolean last;
 
-		boolean isFinal() {
-			return isFinal;
-		}
+        boolean isLast() {
+            return last;
+        }
 
-		State(State start, String prefix) {
-			if (start == null) {
-				start = this;
-			}
-			nextStateMap = new HashMap<>();
-			// TODO: optimize the trie into a graph that is discovered based on input.
-			for (char c = 0; c < 26; c++) {
-				nextStateMap.put((char)('a' + c), start);
-			}
-			this.prefix = prefix;
-		}
-	}
+        void setLast(boolean last) {
+            this.last = last;
+        }
 
-	void buildStateMachine(String pattern) {
-		List<State> list = new ArrayList<>();
-		State currState = start;
+        State(State start, String prefix) {
+            if (start == null) {
+                start = this;
+            }
+            nextStateMap = new HashMap<>();
+            // TODO: optimize the trie into a graph that is discovered based on input.
+            for (char c = 0; c < 26; c++) {
+                nextStateMap.put((char)('a' + c), start);
+            }
+            this.prefix = prefix;
+        }
+    }
 
-		for (int i = 0; i < pattern.length(); i++) {
-			State nextState = new State(start, pattern.substring(0, i+1));
-			currState.nextStateMap.put(pattern.charAt(i), nextState);
-			currState = nextState;
-			list.add(nextState);
-		}
+    void buildStateMachine(String pattern) {
+        List<State> list = new ArrayList<>();
+        State currState = start;
 
-		for (State state : list) {
-			for (char c = 0; c < 26; c++) {
-				String prefix = state.prefix;
-				String othPrefix = prefix.substring(1, prefix.length()) + String.valueOf('a' + c);
-			
-				// run new prefix through start of state machine to get destination state.
-				State dest = getDestinationState(othPrefix);
-				state.nextStateMap.put((char)('a' + c), dest);
-			}
-		}
-	}
+        for (int i = 0; i < pattern.length(); i++) {
+            State nextState = new State(start, pattern.substring(0, i+1));
+            list.add(nextState);
 
-	State getDestinationState(String prefix) {
-		State currState = start;
-		State nextState = null;
+            currState.nextStateMap.put(pattern.charAt(i), nextState);
+            currState = nextState;
+        }
+        State last = list.get(list.size()-1);
+        last.setLast(true);
 
-		for (char c : prefix.toCharArray()) {
-			nextState = currState.nextStateMap.get(c);
-		}
+        for (State state : list) {
+            String prefix = state.prefix;
+            for (char c = 0; c < 26; c++) {
+                char ch = (char)('a' + c);
+                String othPrefix = prefix.substring(1, prefix.length()) + String.valueOf(ch);
 
-		return nextState;
-	}
+                // run new prefix through start of state machine to get destination state.
+                if (state.nextStateMap.get(ch) == start) {
+                    State dest = getDestinationState(othPrefix);
+                    state.nextStateMap.put(ch, dest);
+                }
+            }
+        }
+    }
 
-	boolean matchPattern(String src) {
-		State currState = start;
+    State getDestinationState(String prefix) {
+        State currState = start;
+        State nextState = null;
 
-		for (char c : src.toCharArray()) {
-			State nextState = currState.nextStateMap.get(c);
-			if (nextState.isFinal()) {
-				return true;
-			}
-		}
+        for (char c : prefix.toCharArray()) {
+            nextState = currState.nextStateMap.get(c);
+        }
 
-		return false;
-	}
+        return nextState;
+    }
 
-	public static void main(String args[]) {
-		StateMachinePatternMatcher matcher = new StateMachinePatternMatcher();
+    boolean matchPattern(String src) {
+        State currState = start;
 
-		matcher.buildStateMachine("abc");
-		System.out.println(matcher.matchPattern("abcd"));
-	}
+        for (char c : src.toCharArray()) {
+            currState = currState.nextStateMap.get(c);
+            if (currState.isLast()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static void main(String args[]) {
+        StateMachinePatternMatcher matcher = new StateMachinePatternMatcher();
+
+        matcher.buildStateMachine("abc");
+        System.out.println(matcher.matchPattern("ababc"));
+    }
 }
