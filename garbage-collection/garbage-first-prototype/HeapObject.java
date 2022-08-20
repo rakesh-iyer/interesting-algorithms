@@ -2,7 +2,8 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
-// this is a proxy representation of an object in the heap, so as to be able to collect it.
+// this is a proxy representation of a usable object in the heap, so as to be able to collect it.
+// all allocations will be in Eden.
 // this is to keep this prototype agnostic of the language semantics.
 public class HeapObject implements Serializable {
     static final int EMPTY = 0;
@@ -42,13 +43,13 @@ public class HeapObject implements Serializable {
 
     void deallocate() {
         // no-op in GC languages.
+        // do you need to update the region information and delink from the region object
     }
 
     static HeapObject alloc(int size) {
         HeapObject heapObject = new HeapObject(size);
-
-        // need tp find region to add to and update information.
-        //region.addObject(heapObject);
+        Region region = Region.getRegionOfTypeAndAge(Region.RegionType.Eden, 0, size);
+        heapObject.startAddress = region.addObject(heapObject);
 
         return heapObject;
     }

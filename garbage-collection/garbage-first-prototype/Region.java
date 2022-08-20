@@ -9,6 +9,7 @@ public class Region {
     AtomicInteger size;
     RegionType type;
     int age;
+    byte regionData[] = new byte[MAX_SIZE];
     // there might be internal fragmentation in real cases.
     static final int MAX_SIZE = 65536;
     static Map<RegionType, List<Region>> regionsMap = new HashMap<>();
@@ -45,20 +46,22 @@ public class Region {
         regionsMap.get(type).remove(this);
     }
 
-    // lets remove these monitor calls.
+     // lets remove these monitor calls.
     synchronized boolean canAddObject(HeapObject heapObject) {
         int testSize = size.get() + heapObject.size;
         return testSize > MAX_SIZE;
     }
 
-    synchronized void addObject(HeapObject heapObject) {
+    synchronized int addObject(HeapObject heapObject) {
         heapObjects.add(heapObject);
-        size.addAndGet(heapObject.size);
+        return size.getAndAdd(heapObject.size);
     }
 
+    // do not change the size as it will require managing internal fragmentation.
+    // better to rely on copying to a new region on a collection.
+    // lets confirm this is how Garbage-First does this.
     synchronized void removeObject(HeapObject heapObject) {
         heapObjects.remove(heapObject);
-        size.addAndGet(-heapObject.size);
     }
 
     static void deAllocateUnmarkedObjects(Region.RegionType regionType) {
@@ -95,7 +98,7 @@ public class Region {
 
     // lets do suboptimal for now, and then try to find the right datastructure for this.
     // what complicates things is querying age based region Identification is Old Gen specific.
-    public static Region getRegionsOfTypeAndAge(RegionType regionType, int age, int space) {
+    public static Region getRegionOfTypeAndAge(RegionType regionType, int age, int space) {
         List<Region> regions = regionsMap.get(regionType);
 
         for (Region region: regions) {
@@ -107,5 +110,9 @@ public class Region {
         Region region = new Region(regionType);
         region.age  = age;
         return region;
+    }
+
+    boolean isEmpty() {
+        return heapObjects.size() == 0;
     }
 }

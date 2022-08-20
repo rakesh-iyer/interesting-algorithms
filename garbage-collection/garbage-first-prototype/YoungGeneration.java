@@ -5,21 +5,31 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class YoungGeneration {
-    List<Region> edenRegions;
-    List<Region> survivor1Regions;
-    List<Region> survivor2Regions;
+    List<Region> edenRegions = new ArrayList<>();
+    List<Region> survivor1Regions = new ArrayList<>();
+    List<Region> survivor2Regions = new ArrayList<>();
     AtomicBoolean currentSurvivor;
     OldGeneration oldGeneration;
-    List<HeapObject> findYoungGenSources() {
-        return new ArrayList<>();
-    }
+    final static int YOUNG_GEN_NUMBER_OF_REGIONS = 10;
 
     YoungGeneration(OldGeneration oldGeneration) {
         this.oldGeneration = oldGeneration;
+        // allocate memory for the 3 regions.
+        for (int i = 0; i < YOUNG_GEN_NUMBER_OF_REGIONS; i++) {
+            edenRegions.add(new Region(Region.RegionType.Eden));
+        }
+
+        for (int i = 0; i < YOUNG_GEN_NUMBER_OF_REGIONS; i++) {
+            survivor1Regions.add(new Region(Region.RegionType.Survivor));
+        }
+
+        for (int i = 0; i < YOUNG_GEN_NUMBER_OF_REGIONS; i++) {
+            survivor2Regions.add(new Region(Region.RegionType.Survivor));
+        }
     }
 
-    void doYoungGC() {
-        List<HeapObject> sources = findYoungGenSources();
+    void doYoungGC(List<HeapObject> sources) {
+        // the steps to collect both eden and current survivor are identical so use a common function.
         doYoungGCSingleSpace(sources, Region.RegionType.Eden);
         doYoungGCSingleSpace(sources, Region.RegionType.Survivor);
         // switch next survivor to current survivor.
@@ -40,7 +50,8 @@ public class YoungGeneration {
         Region.deAllocateUnmarkedObjects(regionType);
         // the main value of this vs sweeping is to avoid internal defrag costs.
         List<HeapObject> agedData = copyToNextSurvivor(markedData);
-        oldGeneration.copyToOldGen(agedData);
+        oldGeneration.copyToRegion(agedData);
+        // for both eden and survivor we dont expect to retain any other heap objects.
         Region.clearAllObjects(regionType);
     }
 
@@ -70,8 +81,8 @@ public class YoungGeneration {
         return agedData;
     }
 
-    void markData(List<HeapObject> edenSources) {
-        for (HeapObject heapObject: edenSources) {
+    void markData(List<HeapObject> regionSources) {
+        for (HeapObject heapObject: regionSources) {
             heapObject.doMarking();
         }
     }

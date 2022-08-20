@@ -22,18 +22,31 @@ public class GarbageFirst {
         return memory.oldGen.currentOccupancy > initiatingHeapOccupancyPercent;
     }
 
+    // TODO:: we need a way to determine sources and push them down to the garbage collection core algos.
     void doGc() {
-        memory.youngGen.doYoungGC();
+        List<HeapObject> sources = getSources();
+        memory.youngGen.doYoungGC(sources);
         if (isOldGenGettingFull()) {
-            memory.oldGen.doMarkOldGen();
-            memory.oldGen.doRemarkOldGen();
-            memory.oldGen.doCleanupOldGenEmptyRegions();
+            memory.oldGen.doMark(sources);
+            memory.oldGen.doRemark(sources);
+            memory.oldGen.doCleanupEmptyRegions();
         }
 
         // do SR only if needed.
         if (isOldGenGettingFull()) {
             memory.oldGen.doSpaceReclamation();
         }
+    }
+
+    List<HeapObject> getSources() {
+        // how to get sources.
+        // gc should happen at the end of a program statement.
+        // stack trace should give you all the current active functions.
+        // lets segregate code from data in this discussion, as code can always be reloaded from disk.
+        // all the local vars are source objects.
+        // all the static objects within the classes involved in the stack trace are also source objects.
+        // all objects reachable from source objects are to be marked.
+        return new ArrayList<HeapObject>();
     }
 
     public static void main(String args[]) {
