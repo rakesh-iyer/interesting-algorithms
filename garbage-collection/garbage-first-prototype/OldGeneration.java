@@ -12,11 +12,10 @@ public class OldGeneration {
         // snapshot memory and then mark it using one of the marking algorithms.
         // we need to essentially create a copy of the heap objects. But is this in old gen only??
         // do we need to pause on the copy creation?
-        // we need to correlate the heapObjects into the corresponding objects in the copy.
-        List<HeapObject> regionSources = HeapObject.filterObjects(sources, Region.RegionType.Old);
-        markData(regionSources);
+        List<HeapObject> copySources = copyHeapSources(sources);
+        List<HeapObject> regionCopySources = HeapObject.filterObjects(copySources, Region.RegionType.Old);
+        markData(regionCopySources);
     }
-
 
     void doRemark(List<HeapObject> sources) {
         // we need to hone into this later, this might be the most detail oriented of the algorithms involved.
@@ -74,5 +73,49 @@ public class OldGeneration {
             heapObject.doMarking();
         }
     }
+
+    List<HeapObject> copyHeapSources(List<HeapObject> sources) {
+        List<HeapObject> copySources = new ArrayList<>();
+
+        for (HeapObject source : sources) {
+            HeapObject heapObject = copyHeapSource(source);
+            copySources.add(heapObject);
+        }
+
+        return copySources;
+    }
+
+    HeapObject copyHeapSource(HeapObject source) {
+        // use bfs on the sources to avoid wasting too much stack space.
+        Queue<HeapObject> queue = new LinkedList<>();
+        Map<HeapObject, HeapObject> cloneMap = new HashMap<>();
+        Set<HeapObject> visited = new HashSet<>();
+
+        HeapObject clone = source.clone();
+        cloneMap.put(source, clone);
+        visited.add(source);
+        queue.add(source);
+
+        while (!queue.isEmpty()) {
+            HeapObject current = queue.remove();
+
+            for (HeapObject reference: current.references) {
+                HeapObject referenceClone;
+                if (visited.contains(reference)) {
+                    referenceClone = reference.clone();
+
+                    cloneMap.put(reference, referenceClone);
+                    visited.add(reference);
+                    queue.add(reference);
+                } else {
+                    referenceClone = cloneMap.get(reference);
+                }
+                current.references.add(referenceClone);
+            }
+        }
+
+        return clone;
+    }
+
 }
 

@@ -15,8 +15,8 @@ public class HeapObject implements Serializable {
     int age;
     List<HeapObject> references = new ArrayList<>();
 
-    HeapObject(int s) {
-        size = s;
+    HeapObject(int size) {
+        this.size = size;
     }
 
     void doMarking() {
@@ -59,5 +59,11 @@ public class HeapObject implements Serializable {
             Region region = Region.allRegions.get(heapObject.regionId);
             return region != null && region.type == regionType;
         }).collect(Collectors.toList());
+    }
+
+    public HeapObject clone() {
+        HeapObject clone = new HeapObject(size);
+
+        return clone;
     }
 }
